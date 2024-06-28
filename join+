@@ -1,0 +1,67 @@
+#!/bin/bash
+
+usage() {
+    echo "Usage: join+ file1 file2 file3 ..."
+    echo "Description: join multiple files based on the first field"
+    } >&2
+# join+: join multiple files 
+# Usage: join+ file1 file2 file3 ...
+#
+#     %cat file1
+#     #num     name
+#     1       tako
+#     2       ika
+#     3       uni
+#     4       toro
+#
+#     %cat file2
+#     #num     p
+#     1       7
+#     4       2
+#
+#     %cat file3
+#     #num     q
+#     2       5
+#     3       3
+#
+#     %join+ file1 file2 file3
+#     #num name p q
+#     1 tako 7 -
+#     2 ika - 5
+#     3 uni - 3
+#     4 toro 2 -
+
+if [ $# -lt 2 ]; then
+    usage
+    exit 1
+fi
+
+COMMAND='join -o auto -e - -a 1 -a 2'
+
+for i in "$@"
+do
+    sort -k 1b,1 $i >$i.sorted
+done
+sortedfiles=`echo $@  | sed -E "s/[^[:blank:]]+/&.sorted/g"`
+echo "Files created: "$sortedfiles >&2 
+
+recursion() {
+    if [ $# -eq 1 ]; then
+        $COMMAND - "$1"
+    else
+        f=$1; shift
+        $COMMAND - "$f" | recursion "$@"
+    fi
+}
+
+if [ $# -le 2 ]; then
+    $COMMAND $sortedfiles
+else
+    firsttwo=`echo $sortedfiles |awk '{print $1, $2}'`
+    rest=`echo $sortedfiles | cut -d ' ' -f 3-`
+    $COMMAND $firsttwo | recursion $rest
+fi
+
+# Takuya Okabe
+# Original: 2002/08/05
+# Time stamp: 2024/06/25
